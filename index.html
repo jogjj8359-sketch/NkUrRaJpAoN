@@ -3,32 +3,109 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Менің видео сайтым</title>
+<title>MyForum</title>
 
 <style>
 *{
     margin:0;
     padding:0;
+    box-sizing:border-box;
+    font-family:Arial,sans-serif;
 }
 
 body{
-    background:black;
+    background:#111;
+    color:white;
+}
+
+header{
+    background:#000;
+    padding:15px;
+    text-align:center;
+    font-size:24px;
+    font-weight:bold;
+    border-bottom:1px solid #333;
+}
+
+.post{
+    max-width:500px;
+    margin:20px auto;
+    background:#1a1a1a;
+    border-radius:15px;
     overflow:hidden;
 }
 
-video{
-    width:100vw;
-    height:100vh;
-    object-fit:cover;
+.user{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:15px;
+}
+
+.avatar{
+    width:40px;
+    height:40px;
+    border-radius:50%;
+    background:#444;
+}
+
+.username{
+    font-weight:bold;
+}
+
+.post img{
+    width:100%;
+}
+
+.actions{
+    padding:10px;
+    font-size:20px;
+}
+
+.text{
+    padding:0 15px 15px;
+}
+
+.bottom{
+    position:fixed;
+    bottom:0;
+    width:100%;
+    background:#000;
+    display:flex;
+    justify-content:space-around;
+    padding:15px;
+    border-top:1px solid #333;
 }
 </style>
 </head>
-
 <body>
 
-<video autoplay controls playsinline>
-    video.mp4
-</video>
+<header>
+MyForum
+</header>
+
+<div class="post">
+    <div class="user">
+        <div class="avatar"></div>
+        <div class="username">Admin</div>
+    </div>
+
+    <img src="https://picsum.photos    <div class="actions">
+        ❤️ 💬 🔄
+    </div>
+
+    <div class="text">
+        Алғашқы жазбаңыз осында көрінеді.
+    </div>
+</div>
+
+<div class="bottom">
+    🏠
+    🔍
+    ➕
+    ❤️
+    👤
+</div>
 
 </body>
 </html>
