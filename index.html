@@ -220,7 +220,7 @@ placeholder="Хабарлама..."
 <div class="premium" onclick="buyPremium()">
 ⭐ PREMIUM МҮШЕЛІК
 </div>
-
+  
 <div class="donate">
 💰 Kaspi:<br>
 +7 700 101 3309
@@ -350,8 +350,20 @@ document.querySelector(".premium").style.background =
 "#00c853";
 
 }
+}
+function buyPremium()
+{
+
+alert("✅ Premium қосылды!");
+
+document.querySelector(".premium").innerHTML =
+"✅ PREMIUM БЕЛСЕНДІ";
+
+document.querySelector(".premium").style.background =
+"#00c853";
 
 }
+  
 </script>
 
 </body>
