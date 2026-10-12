@@ -217,14 +217,31 @@ placeholder="Хабарлама..."
 
 </div>
 
-<div class="premium" onclick="buyPremium()">
-⭐ PREMIUM МҮШЕЛІК
+<div class="donate" onclick="openDonate()">
+💰 Донат жіберу
 </div>
-  
-<div class="donate">
-💰 Kaspi:<br>
-+7 700 101 3309
+
+<div id="donateBox"
+style="
+display:none;
+position:fixed;
+top:50%;
+left:50%;
+transform:translate(-50%,-50%);
+background:white;
+color:black;
+padding:20px;
+border-radius:12px;
+z-index:9999;
+">
+
+<h3>Kaspi төлемі</h3>
+<p>+7 700 101 3309</p>
+
+<button onclick="closeDonate()">Жабу</button>
+
 </div>
+
 
 <nav>
 <div>🏠</div>
@@ -254,7 +271,7 @@ post.innerHTML=`
 <div class="actions">
 <button class="like"
 onclick="likePost(this)">
-❤️ 0
+❤️ 9999999999999
 </button>
 </div>
 
@@ -363,7 +380,24 @@ document.querySelector(".premium").style.background =
 "#00c853";
 
 }
-  
+ function sendMessage(){
+
+let input =
+document.getElementById("chatInput");
+
+...
+}
+function openDonate(){
+document.getElementById("donateBox").style.display="block";
+}
+
+function closeDonate(){
+document.getElementById("donateBox").style.display="none";
+}
+</script>
+
+</body>
+</html> 
 </script>
 
 </body>
