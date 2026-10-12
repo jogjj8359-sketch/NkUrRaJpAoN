@@ -3,109 +3,330 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MyForum</title>
+<title>ChatForum</title>
 
 <style>
 *{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
-    font-family:Arial,sans-serif;
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:Arial,sans-serif;
 }
 
 body{
-    background:#111;
-    color:white;
+background:#111b21;
+color:white;
+padding-bottom:70px;
 }
 
 header{
-    background:#000;
-    padding:15px;
-    text-align:center;
-    font-size:24px;
-    font-weight:bold;
-    border-bottom:1px solid #333;
+background:#202c33;
+padding:15px;
+font-size:22px;
+font-weight:bold;
+text-align:center;
+position:sticky;
+top:0;
+}
+
+.create-post{
+padding:15px;
+background:#202c33;
+}
+
+.create-post textarea{
+width:100%;
+height:80px;
+border:none;
+border-radius:10px;
+padding:10px;
+}
+
+.create-post button{
+margin-top:10px;
+padding:10px;
+width:100%;
+background:#25d366;
+border:none;
+border-radius:10px;
+font-weight:bold;
+cursor:pointer;
 }
 
 .post{
-    max-width:500px;
-    margin:20px auto;
-    background:#1a1a1a;
-    border-radius:15px;
-    overflow:hidden;
-}
-
-.user{
-    display:flex;
-    align-items:center;
-    gap:10px;
-    padding:15px;
-}
-
-.avatar{
-    width:40px;
-    height:40px;
-    border-radius:50%;
-    background:#444;
-}
-
-.username{
-    font-weight:bold;
-}
-
-.post img{
-    width:100%;
+background:#202c33;
+margin:12px;
+padding:12px;
+border-radius:12px;
 }
 
 .actions{
-    padding:10px;
-    font-size:20px;
+margin-top:10px;
+display:flex;
+gap:10px;
 }
 
-.text{
-    padding:0 15px 15px;
+.actions button{
+padding:8px;
+border:none;
+border-radius:8px;
+cursor:pointer;
 }
 
-.bottom{
-    position:fixed;
-    bottom:0;
-    width:100%;
-    background:#000;
-    display:flex;
-    justify-content:space-around;
-    padding:15px;
-    border-top:1px solid #333;
+.like{
+background:#25d366;
+}
+
+.comment-box{
+margin-top:10px;
+}
+
+.comment-box input{
+width:100%;
+padding:8px;
+border:none;
+border-radius:8px;
+}
+
+.comment-box button{
+margin-top:5px;
+padding:8px;
+width:100%;
+background:#128c7e;
+color:white;
+border:none;
+border-radius:8px;
+}
+
+.comments{
+margin-top:10px;
+font-size:14px;
+}
+
+.chat{
+margin:12px;
+background:#202c33;
+padding:10px;
+border-radius:12px;
+}
+
+.chat-window{
+height:180px;
+overflow-y:auto;
+background:#111b21;
+padding:10px;
+border-radius:10px;
+}
+
+.msg{
+background:#25d366;
+color:black;
+padding:8px;
+margin:5px 0;
+border-radius:8px;
+width:fit-content;
+max-width:80%;
+}
+
+.chat input{
+width:100%;
+padding:10px;
+margin-top:10px;
+border:none;
+border-radius:10px;
+}
+
+.chat button{
+margin-top:5px;
+width:100%;
+padding:10px;
+background:#25d366;
+border:none;
+border-radius:10px;
+}
+
+.premium{
+background:gold;
+color:black;
+padding:15px;
+margin:12px;
+border-radius:12px;
+text-align:center;
+font-weight:bold;
+}
+
+.donate{
+background:#ff5722;
+color:white;
+padding:15px;
+margin:12px;
+border-radius:12px;
+text-align:center;
+cursor:pointer;
+}
+
+nav{
+position:fixed;
+bottom:0;
+left:0;
+right:0;
+background:#202c33;
+display:flex;
+justify-content:space-around;
+padding:14px;
+}
+
+nav div{
+font-size:22px;
 }
 </style>
 </head>
+
 <body>
 
 <header>
-MyForum
+💬 ChatForum
 </header>
 
-<div class="post">
-    <div class="user">
-        <div class="avatar"></div>
-        <div class="username">Admin</div>
-    </div>
+<div class="create-post">
+<textarea id="postText"
+placeholder="Не ойлап тұрсың?"></textarea>
 
-    <img src="https://picsum.photos    <div class="actions">
-        ❤️ 💬 🔄
-    </div>
-
-    <div class="text">
-        Алғашқы жазбаңыз осында көрінеді.
-    </div>
+<button onclick="addPost()">
+➕ Пост жариялау
+</button>
 </div>
 
-<div class="bottom">
-    🏠
-    🔍
-    ➕
-    ❤️
-    👤
+<div id="posts"></div>
+
+<div class="chat">
+<h3>🟢 WhatsApp Chat</h3>
+
+<div class="chat-window" id="chatWindow">
+<div class="msg">Сәлем!</div>
 </div>
+
+<input
+id="chatInput"
+placeholder="Хабарлама..."
+>
+
+<button onclick="sendMessage()">
+Жіберу
+</button>
+
+</div>
+
+<div class="premium">
+⭐ PREMIUM МҮШЕЛІК
+</div>
+
+<div class="donate" onclick="alert('Донат жүйесін кейін қосуға болады')">
+💰 Донат жіберу
+</div>
+
+<nav>
+<div>🏠</div>
+<div>💬</div>
+<div>➕</div>
+<div>⭐</div>
+<div>👤</div>
+</nav>
+
+<script>
+
+function addPost(){
+
+let text =
+document.getElementById("postText").value;
+
+if(text.trim()=="") return;
+
+let post =
+document.createElement("div");
+
+post.className="post";
+
+post.innerHTML=`
+<div>${text}</div>
+
+<div class="actions">
+<button class="like"
+onclick="likePost(this)">
+❤️ 0
+</button>
+</div>
+
+<div class="comment-box">
+<input placeholder="Пікір...">
+<button onclick="addComment(this)">
+Жіберу
+</button>
+</div>
+
+<div class="comments"></div>
+`;
+
+document.getElementById("posts")
+.prepend(post);
+
+document.getElementById("postText")
+.value="";
+}
+
+function likePost(btn){
+
+let count =
+parseInt(btn.innerText.replace("❤️ ",""));
+
+count++;
+
+btn.innerText="❤️ "+count;
+}
+
+function addComment(btn){
+
+let input =
+btn.previousElementSibling;
+
+let text=input.value;
+
+if(text.trim()=="") return;
+
+let comments =
+btn.parentElement.nextElementSibling;
+
+let div =
+document.createElement("div");
+
+div.innerText="💬 "+text;
+
+comments.appendChild(div);
+
+input.value="";
+}
+
+function sendMessage(){
+
+let input =
+document.getElementById("chatInput");
+
+if(input.value.trim()=="") return;
+
+let msg =
+document.createElement("div");
+
+msg.className="msg";
+
+msg.innerText=input.value;
+
+document.getElementById("chatWindow")
+.appendChild(msg);
+
+input.value="";
+}
+
+</script>
 
 </body>
 </html>
