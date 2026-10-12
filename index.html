@@ -217,12 +217,13 @@ placeholder="Хабарлама..."
 
 </div>
 
-<div class="premium">
+<div class="premium" onclick="buyPremium()">
 ⭐ PREMIUM МҮШЕЛІК
 </div>
 
-<div class="donate" onclick="alert('Донат жүйесін кейін қосуға болады')">
-💰 Донат жіберу
+<div class="donate">
+💰 Kaspi:<br>
++7 708 123 45 67
 </div>
 
 <nav>
@@ -325,7 +326,32 @@ document.getElementById("chatWindow")
 
 input.value="";
 }
+function buyPremium(){
 
+localStorage.setItem("premium","true");
+
+alert("✅ Premium қосылды!");
+
+document.querySelector(".premium").innerHTML =
+"✅ PREMIUM БЕЛСЕНДІ";
+
+document.querySelector(".premium").style.background =
+"#00c853";
+}
+
+window.onload=function(){
+
+if(localStorage.getItem("premium")=="true"){
+
+document.querySelector(".premium").innerHTML =
+"✅ PREMIUM БЕЛСЕНДІ";
+
+document.querySelector(".premium").style.background =
+"#00c853";
+
+}
+
+}
 </script>
 
 </body>
