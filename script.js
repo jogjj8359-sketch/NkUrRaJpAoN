@@ -1,439 +1,163 @@
-/* ============================================
-   BLACK RUSSIA — LIFE SIMULATOR
-   Полный игровой движок
-============================================ */
-
-const SAVE_KEY = "blackrussia_save_v1";
-
-/* ================= ДАННЫЕ ================= */
+const SAVE_KEY = "blackrussia_v2";
+const DEFAULT_STATE = { name: "Игрок", xp: 0, money: 1000, energy: 100, cars: [], lastWork: {}, lastCrime: 0 };
 
 const JOBS = [
-  { id: "miner",    name: "Шахтёр",       emoji: "⛏️", pay: 500,  xp: 10, cooldown: 15000,  level: 1,  desc: "Добыча угля в глубокой шахте" },
-  { id: "factory",  name: "Завод",        emoji: "🏭", pay: 1200, xp: 20, cooldown: 30000,  level: 2,  desc: "Работа на конвейере" },
-  { id: "trucker",  name: "Дальнобойщик", emoji: "🚛", pay: 3000, xp: 40, cooldown: 60000,  level: 5,  desc: "Доставка грузов по России" },
-  { id: "business", name: "Бизнес",       emoji: "💼", pay: 8000, xp: 80, cooldown: 120000, level: 10, desc: "Управление собственной компанией" },
+  { id: "miner", name: "Шахтёр", emoji: "⛏️", pay: 400, xp: 10, cd: 10000, lvl: 1, energyCost: 15 },
+  { id: "factory", name: "Завод", emoji: "🏭", pay: 1000, xp: 20, cd: 20000, lvl: 2, energyCost: 25 },
+  { id: "trucker", name: "Дальнобойщик", emoji: "🚛", pay: 3000, xp: 40, cd: 45000, lvl: 5, energyCost: 40 },
+  { id: "business", name: "Бизнес", emoji: "💼", pay: 8000, xp: 80, cd: 90000, lvl: 10, energyCost: 60 }
 ];
-
 const CARS = [
-  { id: "vaz",      name: "ВАЗ 2107",        emoji: "🚗", price: 50000,   level: 1, desc: "Легендарная классика" },
-  { id: "bmw",      name: "BMW M5",          emoji: "🏎️", price: 800000,  level: 5, desc: "Спортивный седан" },
-  { id: "mercedes", name: "Mercedes S-Class", emoji: "🚘", price: 2000000, level: 8, desc: "Премиум-комфорт" },
+  { id: "vaz", name: "ВАЗ 2107", emoji: "🚗", price: 50000, lvl: 1, desc: "Классика" },
+  { id: "bmw", name: "BMW M5", emoji: "🏎️", price: 800000, lvl: 5, desc: "Спорт" },
+  { id: "merc", name: "Mercedes S-Class", emoji: "🚘", price: 2000000, lvl: 8, desc: "Премиум" }
 ];
 
-const PROPERTIES = [
-  { id: "studio", name: "Квартира-студия", emoji: "🏢", price: 150000,  level: 1,  desc: "Уютная студия в центре" },
-  { id: "two",    name: "2-комнатная",     emoji: "🏠", price: 800000,  level: 3,  desc: "Отличный вариант для семьи" },
-  { id: "penth",  name: "Пентхаус",        emoji: "🏙️", price: 3000000, level: 10, desc: "Элитное жильё с видом" },
-];
+let state = JSON.parse(localStorage.getItem(SAVE_KEY)) || { ...DEFAULT_STATE };
+if(!state.lastWork) state.lastWork = {};
+let ticker = null;
 
-const DEFAULT_STATE = {
-  name: "Игрок",
-  xp: 0,
-  money: 1000,
-  cars: [],
-  properties: [],
-  lastWork: {},
-};
+function save() { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); }
+function lvl() { return Math.floor(state.xp / 100) + 1; }
+function xpInLvl() { return state.xp % 100; }
+function fmt(n) { return n.toLocaleString("ru-RU") + " ₽"; }
 
-/* ================= СОСТОЯНИЕ ================= */
-
-let state = loadState();
-let cdTicker = null;
-
-function loadState() {
-  try {
-    const raw = localStorage.getItem(SAVE_KEY);
-    if (raw) return { ...DEFAULT_STATE, ...JSON.parse(raw) };
-  } catch (e) {
-    console.warn("Ошибка загрузки:", e);
-  }
-  return JSON.parse(JSON.stringify(DEFAULT_STATE));
-}
-
-function saveState() {
-  try {
-    localStorage.setItem(SAVE_KEY, JSON.stringify(state));
-  } catch (e) {
-    console.warn("Ошибка сохранения:", e);
-  }
-}
-
-/* ================= ХЕЛПЕРЫ ================= */
-
-function level() { return Math.floor(state.xp / 100) + 1; }
-function xpInLevel() { return state.xp % 100; }
-
-function formatMoney(n) {
-  return n.toLocaleString("ru-RU") + " ₽";
-}
-
-function escapeHtml(str) {
-  return String(str)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
-/* ================= РЕНДЕР ================= */
-
-function renderAll() {
-  renderHeader();
-  renderProfile();
-  renderJobs();
-  renderCars();
-  renderProperties();
-}
-
-function renderHeader() {
-  document.getElementById("hdr-money").textContent = formatMoney(state.money);
-  document.getElementById("hdr-level").textContent = "Ур. " + level();
+function render() {
+  document.getElementById("hdr-money").textContent = fmt(state.money);
+  document.getElementById("hdr-energy").textContent = state.energy + "%";
+  document.getElementById("hdr-level").textContent = "Ур. " + lvl();
+  renderProfile(); renderJobs(); renderCars(); renderCriminal();
 }
 
 function renderProfile() {
-  const el = document.getElementById("tab-profile");
-  const lvl = level();
-  const xpPct = xpInLevel();
-
-  el.innerHTML = `
+  document.getElementById("tab-profile").innerHTML = `
     <div class="profile-card">
       <div class="avatar">👤</div>
       <div class="profile-info">
-        <div class="profile-name">
-          <span>${escapeHtml(state.name)}</span>
-          <button class="icon-btn" id="edit-name" title="Изменить имя">✏️</button>
-        </div>
-        <div class="level-line">Уровень ${lvl}</div>
-        <div class="xp-bar"><div class="xp-fill" style="width:${xpPct}%"></div></div>
-        <div class="xp-text">${xpInLevel()} / 100 XP до следующего уровня</div>
+        <div class="profile-name">${state.name} <button class="icon-btn" id="edit-name">✏️</button></div>
+        <div style="font-size:13px;color:var(--muted)">Уровень ${lvl()}</div>
+        <div class="xp-bar"><div class="xp-fill" style="width:${xpInLvl()}%"></div></div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">${xpInLvl()} / 100 XP</div>
       </div>
     </div>
-
     <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-icon">💰</div>
-        <div class="stat-val">${formatMoney(state.money)}</div>
-        <div class="stat-lbl">Баланс</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon">🚗</div>
-        <div class="stat-val">${state.cars.length}</div>
-        <div class="stat-lbl">Машин</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon">🏠</div>
-        <div class="stat-val">${state.properties.length}</div>
-        <div class="stat-lbl">Жильё</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon">⭐</div>
-        <div class="stat-val">${lvl}</div>
-        <div class="stat-lbl">Уровень</div>
-      </div>
+      <div class="stat-card"><div class="stat-icon">💰</div><div class="stat-val">${fmt(state.money)}</div><div class="stat-lbl">Баланс</div></div>
+      <div class="stat-card"><div class="stat-icon">⚡</div><div class="stat-val">${state.energy}</div><div class="stat-lbl">Энергия</div></div>
+      <div class="stat-card"><div class="stat-icon">🚗</div><div class="stat-val">${state.cars.length}</div><div class="stat-lbl">Машин</div></div>
+      <div class="stat-card"><div class="stat-icon">⭐</div><div class="stat-val">${lvl()}</div><div class="stat-lbl">Уровень</div></div>
     </div>
-
-    <div class="section">
-      <h3>Моё имущество</h3>
-      <div class="owned-list" id="owned-list"></div>
-    </div>
-
     <button class="btn btn-danger" id="reset-btn">🗑 Сбросить прогресс</button>
   `;
-
-  document.getElementById("edit-name").onclick = editName;
-  document.getElementById("reset-btn").onclick = resetGame;
-  renderOwned();
-}
-
-function renderOwned() {
-  const list = document.getElementById("owned-list");
-  if (!list) return;
-
-  if (state.cars.length === 0 && state.properties.length === 0) {
-    list.innerHTML = `<div class="empty">Пока ничего не куплено 😔</div>`;
-    return;
-  }
-
-  let html = "";
-  state.cars.forEach((id) => {
-    const c = CARS.find((x) => x.id === id);
-    if (c) html += `<div class="owned-item">${c.emoji} ${c.name}</div>`;
-  });
-  state.properties.forEach((id) => {
-    const p = PROPERTIES.find((x) => x.id === id);
-    if (p) html += `<div class="owned-item">${p.emoji} ${p.name}</div>`;
-  });
-  list.innerHTML = html;
+  document.getElementById("edit-name").onclick = () => {
+    let n = prompt("Новое имя:", state.name);
+    if (n && n.trim()) { state.name = n.trim().slice(0,15); save(); render(); }
+  };
+  document.getElementById("reset-btn").onclick = () => {
+    if(confirm("Сбросить прогресс?")) { state = JSON.parse(JSON.stringify(DEFAULT_STATE)); save(); render(); }
+  };
 }
 
 function renderJobs() {
-  const el = document.getElementById("tab-jobs");
-  const lvl = level();
   const now = Date.now();
-
-  el.innerHTML = JOBS.map((job) => {
-    const locked = lvl < job.level;
-    const last = state.lastWork[job.id] || 0;
-    const remaining = Math.max(0, job.cooldown - (now - last));
-    const onCd = remaining > 0;
-    const progress = onCd ? (1 - remaining / job.cooldown) * 100 : 100;
-
-    let actionHtml;
-    if (locked) {
-      actionHtml = `<div class="lock-msg">🔒 Требуется уровень ${job.level}</div>`;
-    } else if (onCd) {
-      actionHtml = `
-        <div class="cooldown-bar">
-          <div class="cooldown-fill" data-cd-fill="${job.id}" style="width:${progress}%"></div>
-        </div>
-        <div class="cooldown-text" data-cd-text="${job.id}">
-          Доступно через ${Math.ceil(remaining / 1000)}с
-        </div>`;
-    } else {
-      actionHtml = `<button class="btn btn-primary" data-work="${job.id}" style="width:100%">Работать</button>`;
-    }
-
-    return `
-      <div class="job-card ${locked ? "locked" : ""}">
-        <div class="job-head">
-          <div class="job-emoji">${job.emoji}</div>
-          <div class="job-info">
-            <div class="job-name">${job.name}</div>
-            <div class="job-desc">${job.desc}</div>
-          </div>
-        </div>
-        <div class="job-meta">
-          <span>💰 +${job.pay.toLocaleString("ru-RU")} ₽</span>
-          <span>⭐ +${job.xp} XP</span>
-          <span>⏱ ${job.cooldown / 1000}с</span>
-        </div>
-        ${actionHtml}
-      </div>`;
+  document.getElementById("tab-jobs").innerHTML = JOBS.map(j => {
+    let locked = lvl() < j.lvl;
+    let remaining = Math.max(0, j.cd - (now - (state.lastWork[j.id]||0)));
+    let action = locked ? `<div class="lock-msg">🔒 Требуется Ур. ${j.lvl}</div>` :
+      remaining > 0 ? `<div class="lock-msg">⏱ Ждите ${Math.ceil(remaining/1000)} сек...</div>` :
+      `<button class="btn btn-primary" data-work="${j.id}">Работать (⚡ -${j.energyCost})</button>`;
+    return `<div class="job-card"><div class="job-head"><div class="job-emoji">${j.emoji}</div><div class="job-info"><div class="job-name">${j.name}</div><div class="job-desc">${j.desc||''}</div></div></div>
+      <div class="job-meta"><span>💰 +${j.pay} ₽</span><span>⭐ +${j.xp} XP</span></div>${action}</div>`;
   }).join("");
-
-  el.querySelectorAll("[data-work]").forEach((btn) => {
-    btn.onclick = () => doWork(btn.dataset.work);
-  });
-
-  if (anyCooldownActive()) startCooldownTicker();
+  document.querySelectorAll("[data-work]").forEach(b => b.onclick = () => doWork(b.dataset.work));
+  if (JOBS.some(j => now - (state.lastWork[j.id]||0) < j.cd)) startTicker();
 }
 
-function anyCooldownActive() {
-  const now = Date.now();
-  return JOBS.some((j) => now - (state.lastWork[j.id] || 0) < j.cooldown);
+function startTicker() {
+  if(ticker) return;
+  ticker = setInterval(() => {
+    let active = JOBS.some(j => Date.now() - (state.lastWork[j.id]||0) < j.cd);
+    if(active) renderJobs(); else { clearInterval(ticker); ticker = null; renderJobs(); }
+  }, 1000);
 }
-
-function startCooldownTicker() {
-  if (cdTicker) return;
-
-  cdTicker = setInterval(() => {
-    const now = Date.now();
-    let stillActive = false;
-    let needRerender = false;
-
-    JOBS.forEach((job) => {
-      const last = state.lastWork[job.id] || 0;
-      const remaining = job.cooldown - (now - last);
-      const fill = document.querySelector(`[data-cd-fill="${job.id}"]`);
-      const text = document.querySelector(`[data-cd-text="${job.id}"]`);
-
-      if (remaining > 0) {
-        stillActive = true;
-        if (fill) fill.style.width = ((1 - remaining / job.cooldown) * 100) + "%";
-        if (text) text.textContent = `Доступно через ${Math.ceil(remaining / 1000)}с`;
-      } else if (fill || text) {
-        needRerender = true;
-      }
-    });
-
-    if (!stillActive) {
-      clearInterval(cdTicker);
-      cdTicker = null;
-      renderJobs();
-      return;
-    }
-    if (needRerender) renderJobs();
-  }, 250);
-}
-
-/* ================= РАБОТА ================= */
 
 function doWork(id) {
-  const job = JOBS.find((j) => j.id === id);
-  if (!job) return;
-
-  if (level() < job.level) return showToast(`🔒 Нужен уровень ${job.level}`, "error");
-
-  const last = state.lastWork[id] || 0;
-  if (Date.now() - last < job.cooldown) return showToast("⏱ Подождите ещё немного", "error");
-
-  const prevLevel = level();
-
-  state.money += job.pay;
-  state.xp += job.xp;
-  state.lastWork[id] = Date.now();
-  saveState();
-
-  const newLevel = level();
-  if (newLevel > prevLevel) {
-    showToast(`🎉 Новый уровень ${newLevel}!`, "success");
-  } else {
-    showToast(`+${job.pay.toLocaleString("ru-RU")} ₽ • +${job.xp} XP`, "success");
-  }
-
-  renderHeader();
-  renderJobs();
-  renderProfile();
+  const j = JOBS.find(x => x.id === id);
+  if (state.energy < j.energyCost) return toast("🔋 Недостаточно энергии! Отдохните.", "error");
+  if (Date.now() - (state.lastWork[id]||0) < j.cd) return;
+  state.money += j.pay; state.xp += j.xp; state.energy -= j.energyCost; state.lastWork[id] = Date.now();
+  save(); render(); toast(`+${j.pay} ₽ • +${j.xp} XP`, "success");
 }
-
-/* ================= МАГАЗИНЫ ================= */
 
 function renderCars() {
-  const el = document.getElementById("tab-cars");
-  el.innerHTML = CARS.map((c) => shopCardHtml(c, "car")).join("");
-  el.querySelectorAll("[data-buy]").forEach((btn) => {
-    btn.onclick = () => {
-      const item = CARS.find((c) => c.id === btn.dataset.buy);
-      buyItem(item, "car");
-    };
-  });
+  document.getElementById("tab-cars").innerHTML = CARS.map(c => {
+    let owned = state.cars.includes(c.id);
+    let locked = lvl() < c.lvl;
+    let btn = owned ? `<button class="btn btn-disabled">✓ Куплено</button>` :
+      locked ? `<button class="btn btn-disabled">🔒 Ур. ${c.lvl}</button>` :
+      `<button class="btn btn-primary" data-buy="${c.id}">Купить за ${fmt(c.price)}</button>`;
+    return `<div class="shop-card"><div class="shop-emoji">${c.emoji}</div><div class="shop-body"><div class="shop-name">${c.name}</div><div class="shop-desc">${c.desc}</div></div>${btn}</div>`;
+  }).join("");
+  document.querySelectorAll("[data-buy]").forEach(b => b.onclick = () => buyCar(b.dataset.buy));
 }
 
-function renderProperties() {
-  const el = document.getElementById("tab-property");
-  el.innerHTML = PROPERTIES.map((p) => shopCardHtml(p, "property")).join("");
-  el.querySelectorAll("[data-buy]").forEach((btn) => {
-    btn.onclick = () => {
-      const item = PROPERTIES.find((p) => p.id === btn.dataset.buy);
-      buyItem(item, "property");
-    };
-  });
-}
-
-function shopCardHtml(item, type) {
-  const owned = type === "car" ? state.cars.includes(item.id) : state.properties.includes(item.id);
-  const locked = level() < item.level;
-
-  let action;
-  if (owned) {
-    action = `<button class="btn btn-disabled" disabled>✓ Куплено</button>`;
-  } else if (locked) {
-    action = `<button class="btn btn-disabled" disabled>🔒 Ур. ${item.level}</button>`;
-  } else {
-    action = `<button class="btn btn-primary" data-buy="${item.id}">Купить</button>`;
+function buyCar(id) {
+  const c = CARS.find(x => x.id === id);
+  if (state.money < c.price) return toast("💸 Мало денег!", "error");
+  if (confirm(`Купить ${c.name} за ${c.price} ₽?`)) {
+    state.money -= c.price; state.cars.push(c.id); save(); render(); toast("✅ Куплено!", "success");
   }
-
-  return `
-    <div class="shop-card ${owned ? "owned" : ""} ${locked ? "locked" : ""}">
-      <div class="shop-emoji">${item.emoji}</div>
-      <div class="shop-body">
-        <div class="shop-name">${item.name}</div>
-        <div class="shop-desc">${item.desc}</div>
-        <div class="shop-meta">
-          <span class="price">${item.price.toLocaleString("ru-RU")} ₽</span>
-          ${locked ? `<span class="lvl-req">🔒 Ур. ${item.level}</span>` : ""}
-        </div>
-      </div>
-      <div class="shop-action">${action}</div>
-    </div>`;
 }
 
-function buyItem(item, type) {
-  if (!item) return;
+function renderCriminal() {
+  const now = Date.now();
+  const cd = 60000;
+  let remaining = Math.max(0, cd - (now - state.lastCrime));
+  let action = remaining > 0 ? `<div class="lock-msg">Полиция ищет вас... Ждите ${Math.ceil(remaining/1000)} сек</div>` :
+    `<button class="btn btn-primary" style="background:linear-gradient(135deg, #e11d48, #7f1d1d)" id="rob-btn">🔫 Ограбить прохожего (Риск 40%)</button>`;
 
-  if (level() < item.level) return showToast(`🔒 Требуется уровень ${item.level}`, "error");
-  if (state.money < item.price) return showToast("💸 Недостаточно денег", "error");
+  document.getElementById("tab-criminal").innerHTML = `
+    <div class="criminal-card">
+      <div class="criminal-title">🔫 Теневые делишки</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:15px">Если вас поймают, вы потеряете 1000 ₽ и получите розыск.</p>
+      ${action}
+    </div>
+  `;
 
-  const arr = type === "car" ? state.cars : state.properties;
-  if (arr.includes(item.id)) return showToast("Уже куплено", "error");
-
-  confirmModal(
-    "Подтверждение покупки",
-    `Купить «${item.name}» за ${item.price.toLocaleString("ru-RU")} ₽?`,
-    () => {
-      state.money -= item.price;
-      arr.push(item.id);
-      saveState();
-      renderAll();
-      showToast(`✅ Куплено: ${item.name}`, "success");
+  const rb = document.getElementById("rob-btn");
+  if (rb) rb.onclick = () => {
+    state.lastCrime = Date.now();
+    if (Math.random() < 0.4) {
+      state.money -= 1000; toast("🚔 Вас поймали! Штраф 1000 ₽", "error");
+    } else {
+      let win = Math.floor(Math.random() * 3000) + 500;
+      state.money += win; state.xp += 15; toast(`💰 Успех! Вы украли ${win} ₽`, "success");
     }
-  );
-}
-
-/* ================= МОДАЛКА ================= */
-
-function confirmModal(title, text, onConfirm) {
-  const modal = document.getElementById("modal");
-  document.getElementById("modal-title").textContent = title;
-  document.getElementById("modal-text").textContent = text;
-  modal.classList.remove("hidden");
-
-  const confirmBtn = document.getElementById("modal-confirm");
-  const cancelBtn = document.getElementById("modal-cancel");
-
-  const close = () => {
-    modal.classList.add("hidden");
-    confirmBtn.onclick = null;
-    cancelBtn.onclick = null;
+    save(); render();
   };
-
-  confirmBtn.onclick = () => { close(); onConfirm(); };
-  cancelBtn.onclick = close;
+  if (remaining > 0) startCrimeTicker();
 }
 
-/* ================= ПРОЧЕЕ ================= */
-
-function editName() {
-  const newName = prompt("Введите новое имя (до 20 символов):", state.name);
-  if (newName && newName.trim()) {
-    state.name = newName.trim().slice(0, 20);
-    saveState();
-    renderProfile();
-    showToast("Имя изменено", "success");
-  }
+function startCrimeTicker() {
+  if(ticker) return;
+  ticker = setInterval(() => {
+    if(Date.now() - state.lastCrime < 60000) renderCriminal();
+    else { clearInterval(ticker); ticker = null; renderCriminal(); }
+  }, 1000);
 }
 
-function resetGame() {
-  confirmModal(
-    "Сброс прогресса",
-    "Вы уверены? Весь прогресс будет удалён безвозвратно.",
-    () => {
-      state = JSON.parse(JSON.stringify(DEFAULT_STATE));
-      saveState();
-      renderAll();
-      showToast("Прогресс сброшен", "success");
-    }
-  );
-}
-
-function showToast(msg, type = "info") {
+function toast(msg, type="info") {
   const t = document.getElementById("toast");
-  t.textContent = msg;
-  t.className = "toast show " + type;
-  clearTimeout(t._timer);
-  t._timer = setTimeout(() => { t.className = "toast"; }, 2200);
+  t.textContent = msg; t.className = "toast show " + type;
+  setTimeout(() => t.className = "toast", 2500);
 }
 
-/* ================= TABS ================= */
+document.querySelectorAll(".tab").forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll(".tab").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById("tab-" + btn.dataset.tab).classList.add("active");
+  };
+});
 
-function initTabs() {
-  document.querySelectorAll(".tab").forEach((btn) => {
-    btn.onclick = () => {
-      document.querySelectorAll(".tab").forEach((b) => b.classList.remove("active"));
-      document.querySelectorAll(".tab-content").forEach((s) => s.classList.remove("active"));
-      btn.classList.add("active");
-      const target = document.getElementById("tab-" + btn.dataset.tab);
-      if (target) target.classList.add("active");
-    };
-  });
-}
-
-/* ================= СТАРТ ================= */
-
-function init() {
-  initTabs();
-  renderAll();
-}
-
-document.addEventListener("DOMContentLoaded", init);
+render();
